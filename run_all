@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# run_all — reproduces all figures and tables end-to-end.
+# Must be run from the project root: bash run_all [--fast]
+#
+# Usage:
+#   bash run_all            # full pipeline (all rows, 5 seeds)
+#   bash run_all --fast     # fast-check mode (5k rows, same seeds)
+
+set -e
+
+FAST=""
+if [[ "$1" == "--fast" ]]; then
+    FAST="--fast"
+    echo "[run_all] Fast mode enabled"
+fi
+
+# Run from project root so that 'src' is a resolvable package
+cd "$(dirname "$0")"
+
+
+# Validate raw data
+echo ""
+echo "=== Step 1: Data validation ==="
+python -m src.data.validate
+
+
+# Preprocessing pipeline (Task 1.1)
+
+echo ""
+echo "=== Step 2: Preprocessing ==="
+python -m src.preprocessing.pipeline $FAST
+
+echo ""
+echo "=== Done ==="

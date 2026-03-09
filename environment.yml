@@ -1,0 +1,7 @@
+name: ansup-hotel
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # fill in after deciding on library versions
+  - python=3.11
