@@ -1,34 +1,116 @@
 #!/usr/bin/env bash
 # run_all — reproduces all figures and tables end-to-end.
-# Must be run from the project root: bash run_all [--fast]
+# Must be run from the project root: bash run_all [--fast|--full]
 #
 # Usage:
-#   bash run_all            # full pipeline (all rows, 5 seeds)
-#   bash run_all --fast     # fast-check mode (5k rows, same seeds)
+#   bash run_all            # uses FAST_MODE from src/preprocessing/feature_config.py
+#   bash run_all --fast     # fast-check mode (5 000-row subsample, fixed seed 42)
+#   bash run_all --full     # full mode (all 119 390 rows, 10 seeds)
 
 set -e
 
-FAST=""
-if [[ "$1" == "--fast" ]]; then
-    FAST="--fast"
-    echo "[run_all] Fast mode enabled"
-fi
+MODE_FLAG=""
+case "${1:-}" in
+    --fast) MODE_FLAG="--fast"; echo "[run_all] Fast mode (5 000-row subsample)";;
+    --full) MODE_FLAG="--full"; echo "[run_all] Full mode (all rows)";;
+    "")     echo "[run_all] No flag passed; using FAST_MODE from feature_config.py";;
+    *)      echo "[run_all] Unknown flag: $1 (use --fast or --full)"; exit 1;;
+esac
 
 # Run from project root so that 'src' is a resolvable package
-cd "$(dirname "$0")"
+SCRIPT_DIR="${0%/*}"
+if [ "$SCRIPT_DIR" != "$0" ]; then
+    cd "$SCRIPT_DIR"
+fi
+
+resolve_python() {
+    local venv_path=""
+    local is_wsl=0
+    local kernel_release=""
+
+    kernel_release="$(uname -r 2>/dev/null || true)"
+    case "$kernel_release" in
+        *[Mm]icrosoft*) is_wsl=1;;
+    esac
+
+    if [ -n "${VIRTUAL_ENV:-}" ]; then
+        if command -v cygpath >/dev/null 2>&1; then
+            venv_path="$(cygpath -u "$VIRTUAL_ENV")"
+        else
+            venv_path="$VIRTUAL_ENV"
+        fi
+
+        if [ "$is_wsl" -eq 0 ] && [ -x "$venv_path/Scripts/python.exe" ]; then
+            echo "$venv_path/Scripts/python.exe"
+            return 0
+        fi
+        if [ -x "$venv_path/bin/python" ]; then
+            echo "$venv_path/bin/python"
+            return 0
+        fi
+    fi
+
+    if [ "$is_wsl" -eq 0 ]; then
+        for candidate in "../.venv/Scripts/python.exe" ".venv/Scripts/python.exe"; do
+            if [ -x "$candidate" ]; then
+                echo "$candidate"
+                return 0
+            fi
+        done
+    fi
+
+    for candidate in "../.venv/bin/python" ".venv/bin/python"; do
+        if [ -x "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    if command -v python >/dev/null 2>&1; then
+        command -v python
+        return 0
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        command -v python3
+        return 0
+    fi
+
+    echo ""
+    return 1
+}
+
+PYTHON_BIN="$(resolve_python)"
+if [ -z "$PYTHON_BIN" ]; then
+    echo "[run_all] Python interpreter not found. Activate the project venv or install Python." >&2
+    exit 1
+fi
+
+# Avoid a Windows 11/Python 3.13 WMI hang in joblib/loky when scikit-learn
+# asks for the physical CPU count. Keep the default below this machine's
+# logical CPU count so loky does not fall back to its physical-core probe.
+export LOKY_MAX_CPU_COUNT="${LOKY_MAX_CPU_COUNT:-8}"
 
 
 # Validate raw data
 echo ""
 echo "=== Step 1: Data validation ==="
-python -m src.data.validate
+"$PYTHON_BIN" -u -m src.data.validate
 
 
 # Preprocessing pipeline (Task 1.1)
 
 echo ""
 echo "=== Step 2: Preprocessing ==="
-python -m src.preprocessing.pipeline $FAST
+"$PYTHON_BIN" -u -m src.preprocessing.pipeline $MODE_FLAG
+
+
+# Baseline clustering under 3 protocol (Task 1.2)
+
+echo ""
+echo "=== Step 3: Task 1.2 baseline clustering ==="
+"$PYTHON_BIN" -u -m src.clustering.run_baseline $MODE_FLAG
+
+
 
 echo ""
 echo "=== Done ==="

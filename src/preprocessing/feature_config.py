@@ -16,16 +16,36 @@ Feature roles
 5. CLUSTER_NUMERICAL    numerical inputs to the clustering pipeline.
 6. CLUSTER_CATEGORICAL  categorical inputs to the clustering pipeline.
 
-Compact seasonality encoding
+Cyclic seasonality encoding
 ------------------------------------
-The four raw arrival_date_* columns are redundant: arrival_date_year is an
-artefact of the dataset window (Jul-2015 to Aug-2017), week_number and
-day_of_month overlap with month, and using them all inflates the implicit
-distance between bookings that differ on calendar bookkeeping rather than
-booking behaviour. We replace them with two cyclic features
-(arrival_month_sin, arrival_month_cos) computed from arrival_date_month,
-which keeps the seasonal signal compact and behaviourally justified
-(December and January are close in calendar space rather than 11 apart).
+The four raw arrival_date_* columns carry overlapping but not redundant
+information. We follow the course's column_roles.csv recommendation
+("consider cyclic/ordinal encoding choices") and encode the two that
+carry behavioural signal:
+
+  arrival_date_month        -> (arrival_month_sin, arrival_month_cos)
+  arrival_date_week_number  -> (arrival_week_sin,  arrival_week_cos)
+
+Cyclic encoding ensures December and January (or week 52 and week 1) are
+close in feature space rather than 11 / 51 units apart. Month captures
+high-level seasonality (peak summer, off-season), week captures finer
+seasonality (school holidays, Easter, specific peak weeks) that month
+alone smooths over.
+
+The remaining two raw temporal fields are dropped:
+
+  arrival_date_year          - artefact of the dataset window (Jul-2015
+                               to Aug-2017, only 3 distinct values);
+                               behavioural conclusions should be
+                               year-invariant.
+  arrival_date_day_of_month  - sub-monthly noise, no behavioural meaning
+                               at the booking-segmentation timescale;
+                               weekday/weekend rhythm is already captured
+                               by the stays_in_weekend_nights /
+                               stays_in_week_nights split.
+
+All four raw arrival_date_* columns are kept in the profiling frame so
+post-hoc cluster narratives can still reference the calendar directly.
 """
 
 # Dropped, post-event outcome variables
@@ -48,12 +68,13 @@ ID_COLS = [
     "company",  # company ID; 94.3% missing
 ]
 
-# Dropped, redundant raw temporal fields (replaced by cyclic encoding)
+# Raw temporal fields handled by the cyclic / drop policy in the docstring
+# above. All four are kept in the profiling frame for post-hoc narratives.
 RAW_TEMPORAL_COLS = [
-    "arrival_date_year",
-    "arrival_date_week_number",
-    "arrival_date_day_of_month",
-    "arrival_date_month",  # consumed by the cyclic transform, then dropped
+    "arrival_date_year",          # dropped: 3-value dataset-window artefact
+    "arrival_date_month",         # consumed by cyclic (sin, cos), then dropped
+    "arrival_date_week_number",   # consumed by cyclic (sin, cos), then dropped
+    "arrival_date_day_of_month",  # dropped: sub-monthly noise
 ]
 
 # Profiling-only variables: kept for post-hoc cluster profiling,
@@ -70,19 +91,22 @@ PROFILING_ONLY = [
 ]
 
 # Numerical clustering inputs.
-# All available at index time, all behaviourally interpretable.
+# Raw stay/party fields are collapsed into behaviourally meaningful
+# booking-shape signals in preprocessing.pipeline.add_booking_features.
+# All are available at index time and interpretable.
 CLUSTER_NUMERICAL = [
     "lead_time",
-    "stays_in_weekend_nights",
-    "stays_in_week_nights",
-    "adults",
-    "children",
-    "babies",
+    "total_nights",
+    "party_size",
+    "has_kids",
+    "weekend_share",
     "is_repeated_guest",
     "previous_cancellations",
     "previous_bookings_not_canceled",
-    "arrival_month_sin",  # cyclic seasonality
-    "arrival_month_cos",  # cyclic seasonality
+    "arrival_month_sin",  # cyclic month-of-year seasonality
+    "arrival_month_cos",
+    "arrival_week_sin",   # cyclic week-of-year seasonality (finer grain)
+    "arrival_week_cos",
 ]
 
 # Categorical clustering inputs.
@@ -113,13 +137,21 @@ RARE_CATEGORY_MIN_FREQ = 50
 # that would only act as proxies for small subgroups.
 COUNTRY_MIN_FREQ = 100
 
+# One-hot prevalence floor. Dummies below this frequency add sparse
+# distance dimensions without stable cluster structure, so they are
+# dropped after encoding.
+OHE_MIN_PREVALENCE = 0.005
+OHE_VARIANCE_THRESHOLD = OHE_MIN_PREVALENCE * (1 - OHE_MIN_PREVALENCE)
+
 # Fast-mode subsampling
 FAST_MODE = True
 FAST_N    = 5_000
 FAST_SEED = 42
 
 # Fixed seeds, used uniformly across every clustering experiment.
-SEEDS = [0, 1, 2, 3, 4]
+# Ten seeds satisfy the Milestone-2 minimum (>= 10 runs where randomness
+# applies) and give 45 pairs for ARI stability per (method, variant, k).
+SEEDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 # Month name -> ordinal, used by the cyclic seasonality transform.
 MONTH_TO_NUM = {

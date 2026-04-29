@@ -1,6 +1,6 @@
 """Task 1.2 — baseline clustering.
 
-Runs MiniBatchKMeans for k in {2..8} with 5 fixed seeds, plus iK-means
+Runs MiniBatchKMeans for k in {2..8} with the configured fixed seeds, plus iK-means
 under the same protocol, on two preprocessing variants (StandardScaler
 and RobustScaler). For each (method, variant, k, seed) combination it
 records Silhouette, Calinski-Harabasz, Davies-Bouldin in the same
@@ -28,25 +28,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.cluster import MiniBatchKMeans
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, RobustScaler, StandardScaler
+from sklearn.preprocessing import RobustScaler, StandardScaler
 
 from ..data.validate import load_raw
 from ..evaluation.metrics import compute_indices, mean_pairwise_ari
 from ..preprocessing.feature_config import (
-    CLUSTER_CATEGORICAL,
-    CLUSTER_NUMERICAL,
-    COUNTRY_MIN_FREQ,
     FAST_MODE,
     FAST_N,
     FAST_SEED,
+    OHE_MIN_PREVALENCE,
     SEEDS,
 )
 from ..preprocessing.pipeline import (
-    RareCategoryGrouper,
     add_cyclic_seasonality,
+    build_preprocessor,
+    get_feature_names,
     split_clustering_and_profiling,
 )
 from ..utils.experiment_logger import EXP_HEADER, write_experiments
@@ -94,23 +90,6 @@ class RunRow:
 
     def as_dict(self) -> dict:
         return {field: getattr(self, field) for field in EXP_HEADER}
-
-
-def build_preprocessor(scaler_name: str) -> ColumnTransformer:
-    Scaler = SCALERS[scaler_name]
-    num_pipeline = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", Scaler()),
-    ])
-    cat_pipeline = Pipeline([
-        ("imputer", SimpleImputer(strategy="constant", fill_value="Unknown")),
-        ("grouper", RareCategoryGrouper(per_column={"country": COUNTRY_MIN_FREQ})),
-        ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
-    ])
-    return ColumnTransformer([
-        ("num", num_pipeline, CLUSTER_NUMERICAL),
-        ("cat", cat_pipeline, CLUSTER_CATEGORICAL),
-    ])
 
 
 def load_clustering_input(fast: bool) -> pd.DataFrame:
@@ -274,7 +253,7 @@ def plot_internal_indices(summary: pd.DataFrame) -> None:
         ax.set_title(title, fontsize=10)
         ax.grid(alpha=0.3)
     axes[0].legend(fontsize=8, loc="best")
-    fig.suptitle("Task 1.2 — k-means internal indices vs k (mean +/- std over 5 seeds)",
+    fig.suptitle(f"Task 1.2 - k-means internal indices vs k (mean +/- std over {len(SEEDS)} seeds)",
                  fontsize=11, y=1.02)
     plt.tight_layout()
     plt.savefig(FIGURES_DIR / "task1_2_kmeans_internal_indices.png",
@@ -291,7 +270,7 @@ def plot_stability(stab_df: pd.DataFrame) -> None:
     ax.axhline(0.80, color="grey", ls="--", lw=1, label="ARI = 0.80 (selection rule)")
     ax.set_xlabel("k")
     ax.set_ylabel("mean pairwise ARI across seeds")
-    ax.set_title("Task 1.2 — k-means stability vs k", fontsize=10)
+    ax.set_title("Task 1.2 - k-means stability vs k", fontsize=10)
     ax.set_ylim(-0.05, 1.05)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=8)
@@ -310,7 +289,7 @@ def plot_ikmeans(summary: pd.DataFrame, stab_df: pd.DataFrame) -> None:
     axes[0].bar([f"{v}\nk={int(k)}" for v, k in zip(ik["variant"], ik["k"])],
                 ik["sil_mean"], yerr=ik["sil_std"], capsize=4, color="steelblue")
     axes[0].set_ylabel("Silhouette")
-    axes[0].set_title("iK-means Silhouette (mean +/- std, 5 seeds)", fontsize=10)
+    axes[0].set_title(f"iK-means Silhouette (mean +/- std, {len(SEEDS)} seeds)", fontsize=10)
     axes[0].grid(alpha=0.3, axis="y")
 
     axes[1].bar([f"{v}\nk={int(k)}" for v, k in zip(ik_stab["variant"], ik_stab["k"])],
@@ -328,7 +307,7 @@ def plot_ikmeans(summary: pd.DataFrame, stab_df: pd.DataFrame) -> None:
 
 
 def main(fast: bool = FAST_MODE) -> None:
-    _progress("=== Task 1.2 — baseline clustering ===")
+    _progress("=== Task 1.2 - baseline clustering ===")
     sil_sample = SILHOUETTE_SAMPLE_FAST if fast else SILHOUETTE_SAMPLE_FULL
     df_input = load_clustering_input(fast)
 
@@ -337,10 +316,18 @@ def main(fast: bool = FAST_MODE) -> None:
 
     for variant in SCALERS:
         _progress(f"\n--- variant: scaler={variant} ---")
-        preproc = build_preprocessor(variant)
+        preproc = build_preprocessor(SCALERS[variant])
         _progress(f"  [preprocess] fitting transformer for scaler={variant}")
         X = preproc.fit_transform(df_input)
-        _progress(f"X shape: {X.shape}")
+        feature_names = get_feature_names(preproc)
+        block_weight = preproc.named_steps["block"].weight_
+        n_num = len(feature_names) - preproc.named_steps["block"].n_cat_
+        _progress(
+            f"X shape: {X.shape} "
+            f"(num={n_num}, cat_kept={preproc.named_steps['block'].n_cat_}, "
+            f"block_weight={block_weight:.3f}, "
+            f"OHE prevalence floor={OHE_MIN_PREVALENCE})"
+        )
 
         _progress(f"  [k-means] k in {K_RANGE} x seeds {SEEDS}")
         km_rows, km_labels = run_kmeans_collect(X, variant, sil_sample)
