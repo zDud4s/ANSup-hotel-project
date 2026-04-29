@@ -1,0 +1,32 @@
+course_release: v1
+dataset_name: Hotel Booking Demand
+unit_of_analysis: "Each row corresponds to one booking record."
+n_rows: 119390
+n_columns: 32
+created_utc: 2026-02-22T16:03:09Z
+
+upstream_sources:
+  kaggle_dataset: "https://www.kaggle.com/datasets/jessemostipak/hotel-booking-demand"
+  reference_paper_doi: "https://doi.org/10.1016/j.dib.2018.11.126"
+  snapshot_obtained_from: "https://raw.githubusercontent.com/salves94/hotel-exploratory-data-analysis/master/hotel_bookings.csv"
+
+license_terms:
+  kaggle_listing: "Attribution 4.0 International (CC BY 4.0) (as stated on Kaggle dataset page)."
+
+governance_notes:
+  - "Raw snapshot provided: no cleaning/imputation performed by instructors."
+  - "Do NOT commit the raw dataset to student repositories; include scripts/instructions to obtain it."
+  - "Leakage control: exclude outcome/post-event variables from clustering inputs (at minimum: is_canceled, reservation_status)."
+  - "ID-like/high-cardinality fields (e.g., agent, company) should be dropped unless clearly justified."
+  - "If subsampling is required, use a fixed rule (sample size + seed) and report its impact."
+
+files:
+  - name: hotel_bookings_course_release_v1.csv
+    sha256: 7c2ae42a7353905ea136e5c2287f17c92c5435826598bfbb8491c6f0c7b1fc06
+    bytes: 16855599
+  - name: column_roles.csv
+    sha256: e1fbd73a324ce29154c4a68e4ea96ed66ac7f5f2c09a0ad5fccb6711a3dbf3fe
+    bytes: 4192
+  - name: subsample_indices_v1_n30000_seed12345.txt
+    sha256: c8395c905cc2eff406bfb115b3ad2776234ef7f3809cb57d63d5b28c289e7472
+    bytes: 182115

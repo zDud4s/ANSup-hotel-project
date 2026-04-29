@@ -1,0 +1,33 @@
+column,recommended_action,role,rationale
+hotel,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+is_canceled,exclude,outcome/post-event,Outcome or post-event attribute; do not use to form clusters (allowed only for post-hoc profiling).
+lead_time,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+arrival_date_year,include,time/context,Arrival date information (known at booking); consider cyclic/ordinal encoding choices.
+arrival_date_month,include,time/context,Arrival date information (known at booking); consider cyclic/ordinal encoding choices.
+arrival_date_week_number,include,time/context,Arrival date information (known at booking); consider cyclic/ordinal encoding choices.
+arrival_date_day_of_month,include,time/context,Arrival date information (known at booking); consider cyclic/ordinal encoding choices.
+stays_in_weekend_nights,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+stays_in_week_nights,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+adults,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+children,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+babies,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+meal,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+country,review,high-cardinality categorical,May have many levels; consider rare-category grouping/min-frequency threshold before one-hot.
+market_segment,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+distribution_channel,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+is_repeated_guest,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+previous_cancellations,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+previous_bookings_not_canceled,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+reserved_room_type,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+assigned_room_type,review,likely post-booking operational,May be determined/updated after initial booking; treat as potential leakage depending on segmentation time.
+booking_changes,review,likely post-booking operational,May be determined/updated after initial booking; treat as potential leakage depending on segmentation time.
+deposit_type,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+agent,exclude,id-like/high-cardinality,Identifier-like field with many unique values; drop unless clearly justified with responsible encoding.
+company,exclude,id-like/high-cardinality,Identifier-like field with many unique values; drop unless clearly justified with responsible encoding.
+days_in_waiting_list,review,likely post-booking operational,May be determined/updated after initial booking; treat as potential leakage depending on segmentation time.
+customer_type,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+adr,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+required_car_parking_spaces,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+total_of_special_requests,include,cluster_input_candidate,Generally available at booking time; still justify per your scenario.
+reservation_status,exclude,outcome/post-event,Outcome or post-event attribute; do not use to form clusters (allowed only for post-hoc profiling).
+reservation_status_date,exclude,outcome/post-event,Outcome or post-event attribute; do not use to form clusters (allowed only for post-hoc profiling).
