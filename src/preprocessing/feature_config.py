@@ -104,8 +104,6 @@ CLUSTER_NUMERICAL = [
     "party_size",
     "has_kids",
     "weekend_share",
-    "arrival_month_sin",  # cyclic month-of-year seasonality
-    "arrival_month_cos",
     "arrival_week_sin",   # cyclic week-of-year seasonality (finer grain)
     "arrival_week_cos",
 ]
