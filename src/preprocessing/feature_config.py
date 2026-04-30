@@ -88,6 +88,10 @@ PROFILING_ONLY = [
     "required_car_parking_spaces",
     "total_of_special_requests",
     "adr",
+    "is_repeated_guest",
+    "previous_cancellations",
+    "previous_bookings_not_canceled",
+    "country",
 ]
 
 # Numerical clustering inputs.
@@ -100,9 +104,6 @@ CLUSTER_NUMERICAL = [
     "party_size",
     "has_kids",
     "weekend_share",
-    "is_repeated_guest",
-    "previous_cancellations",
-    "previous_bookings_not_canceled",
     "arrival_month_sin",  # cyclic month-of-year seasonality
     "arrival_month_cos",
     "arrival_week_sin",   # cyclic week-of-year seasonality (finer grain)
@@ -117,7 +118,6 @@ CLUSTER_NUMERICAL = [
 # discrimination must remain explicit in the report and conclusions.
 CLUSTER_CATEGORICAL = [
     "hotel",
-    "country",  # interpret with caution; document proxy-discrimination risk
     "market_segment",
     "distribution_channel",
     "reserved_room_type",
