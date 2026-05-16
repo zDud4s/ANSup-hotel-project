@@ -200,7 +200,6 @@ def build_preprocessor(scaler_cls=StandardScaler) -> Pipeline:
         ("grouper", RareCategoryGrouper(per_column={"country": COUNTRY_MIN_FREQ})),
         ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
         ("dropvar", VarianceThreshold(threshold=OHE_VARIANCE_THRESHOLD)),
-        ("scaler", StandardScaler()),
     ])
 
     column_transformer = ColumnTransformer([
