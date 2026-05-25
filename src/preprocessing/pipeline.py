@@ -202,7 +202,7 @@ def build_preprocessor(scaler_cls=StandardScaler) -> Pipeline:
         ("dropvar", VarianceThreshold(threshold=OHE_VARIANCE_THRESHOLD)),
     ])
 
-    column_transformer = ColumnTransformer([
+    column_transformer = ColumnTransformer([ 
         ("num", num_pipeline, CLUSTER_NUMERICAL),
         ("cat", cat_pipeline, CLUSTER_CATEGORICAL),
     ])

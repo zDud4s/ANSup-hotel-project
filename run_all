@@ -110,6 +110,10 @@ echo ""
 echo "=== Step 3: Task 1.2 baseline clustering ==="
 "$PYTHON_BIN" -u -m src.clustering.run_baseline $MODE_FLAG
 
+echo ""
+echo "=== Step 4: Task 2.1 Gaussian Mixture Model clustering ==="
+"$PYTHON_BIN" -u -m src.clustering.run_gaussian $MODE_FLAG
+
 
 
 echo ""
