@@ -820,6 +820,146 @@ def _html_document(
     )
 
 
+def _write_static_figure(
+    *,
+    coords: np.ndarray,
+    labels_sample: np.ndarray,
+    clusters: list[dict],
+    variance: list[float],
+    method_name: str,
+    scaler: str,
+    n_rows: int,
+    n_sample: int,
+    png_path: Path,
+) -> None:
+    """Render a browser-free static twin of the interactive 3D scene.
+
+    This is the figure committed to the repository and referenced by the report:
+    it reproduces the same PCA(3) cloud as the Three.js visualizer using only
+    matplotlib, so ``run_all`` regenerates it with no browser dependency.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 (registers 3d projection)
+
+    bg = "#101113"
+    panel_bg = "#15171a"
+    text_c = "#f3f1ec"
+    muted_c = "#a9aaa8"
+    grid_c = (1.0, 1.0, 1.0, 0.06)
+
+    cluster_ids = [int(c["cluster"]) for c in clusters]
+    color_for = {int(c["cluster"]): c["color"] for c in clusters}
+    share_for = {int(c["cluster"]): float(c["share"]) for c in clusters}
+
+    v = [float(x) * 100.0 for x in variance]
+    lab = {"pc1": f"PC1  {v[0]:.1f}%", "pc2": f"PC2  {v[1]:.1f}%", "pc3": f"PC3  {v[2]:.1f}%"}
+
+    # A handful of outliers stretch the raw PCA axes and leave the dense cloud
+    # tiny. Zoom both panels to the central mass (the same trick the 2D view uses).
+    def _bounds(values: np.ndarray, lo: float = 1.5, hi: float = 98.5, pad: float = 0.06):
+        a, b = np.percentile(values, [lo, hi])
+        span = (b - a) or 1.0
+        return float(a - span * pad), float(b + span * pad)
+
+    xlim, ylim, zlim = (_bounds(coords[:, 0]), _bounds(coords[:, 1]), _bounds(coords[:, 2]))
+    in3d = (
+        (coords[:, 0] >= xlim[0]) & (coords[:, 0] <= xlim[1])
+        & (coords[:, 1] >= ylim[0]) & (coords[:, 1] <= ylim[1])
+        & (coords[:, 2] >= zlim[0]) & (coords[:, 2] <= zlim[1])
+    )
+    in2d = (
+        (coords[:, 0] >= xlim[0]) & (coords[:, 0] <= xlim[1])
+        & (coords[:, 1] >= ylim[0]) & (coords[:, 1] <= ylim[1])
+    )
+
+    fig = plt.figure(figsize=(13.0, 6.2), facecolor=bg)
+
+    # Isometric 3D panel: the "hero" view, matching the interactive scene.
+    ax = fig.add_subplot(1, 2, 1, projection="3d")
+    ax.set_facecolor(bg)
+    for cid in cluster_ids:
+        m = (labels_sample == cid) & in3d
+        if m.any():
+            ax.scatter(coords[m, 0], coords[m, 1], coords[m, 2], s=6,
+                       c=color_for[cid], alpha=0.55, edgecolors="none", depthshade=True)
+    for cid in cluster_ids:
+        m = labels_sample == cid
+        if m.any():
+            cx, cy, cz = coords[m].mean(axis=0)
+            ax.scatter([cx], [cy], [cz], s=110, c=color_for[cid],
+                       edgecolors="white", linewidths=1.1, marker="o", depthshade=False)
+    ax.set_xlim3d(xlim)
+    ax.set_ylim3d(ylim)
+    ax.set_zlim3d(zlim)
+    ax.view_init(elev=18, azim=-62)
+    ax.set_xlabel(lab["pc1"], color=text_c, fontsize=9, labelpad=4)
+    ax.set_ylabel(lab["pc2"], color=text_c, fontsize=9, labelpad=4)
+    ax.set_zlabel(lab["pc3"], color=text_c, fontsize=9, labelpad=4)
+    ax.set_title("Isometric projection", color=text_c, fontsize=11, pad=6)
+    ax.tick_params(colors=muted_c, labelsize=6)
+    for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+        try:
+            axis.set_pane_color((1, 1, 1, 0.015))
+            axis.pane.set_edgecolor((1, 1, 1, 0.08))
+            axis._axinfo["grid"]["color"] = grid_c
+            axis.line.set_color((1, 1, 1, 0.25))
+        except Exception:
+            pass
+
+    # PC1 x PC2 plane: the analytical view where the segment split reads cleanly.
+    ax2 = fig.add_subplot(1, 2, 2)
+    ax2.set_facecolor(panel_bg)
+    for cid in cluster_ids:
+        m = (labels_sample == cid) & in2d
+        if m.any():
+            ax2.scatter(coords[m, 0], coords[m, 1], s=7, c=color_for[cid],
+                        alpha=0.5, edgecolors="none")
+    for cid in cluster_ids:
+        m = labels_sample == cid
+        if m.any():
+            ax2.scatter([coords[m, 0].mean()], [coords[m, 1].mean()], s=120,
+                        c=color_for[cid], edgecolors="white", linewidths=1.1, marker="o")
+    ax2.set_xlim(xlim)
+    ax2.set_ylim(ylim)
+    ax2.set_xlabel(lab["pc1"], color=text_c, fontsize=9)
+    ax2.set_ylabel(lab["pc2"], color=text_c, fontsize=9)
+    ax2.set_title("PC1 x PC2 plane", color=text_c, fontsize=11, pad=6)
+    ax2.tick_params(colors=muted_c, labelsize=7)
+    for spine in ax2.spines.values():
+        spine.set_color((1, 1, 1, 0.18))
+
+    handles = [
+        Line2D([0], [0], marker="o", linestyle="none", markersize=7,
+               markerfacecolor=color_for[cid], markeredgecolor="none",
+               label=f"segment {cid}  ({share_for[cid] * 100:.1f}%)")
+        for cid in cluster_ids
+    ]
+    leg = ax2.legend(handles=handles, loc="upper right", fontsize=7.5, frameon=True,
+                     facecolor=panel_bg, edgecolor=(1, 1, 1, 0.15), framealpha=0.85,
+                     labelcolor=text_c, title="clusters", title_fontsize=8)
+    if leg is not None and leg.get_title() is not None:
+        leg.get_title().set_color(muted_c)
+
+    fig.suptitle(
+        f"Clustering space, diagnostic PCA projection  ({method_name} + {scaler} scaler, k={len(cluster_ids)})",
+        color=text_c, fontsize=13, y=0.97,
+    )
+    fig.text(
+        0.5, 0.035,
+        "PCA is a viewing aid only: clustering uses the full preprocessed feature space.  "
+        f"n={n_sample:,} points sampled from {n_rows:,} bookings.",
+        ha="center", color=muted_c, fontsize=8.5,
+    )
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.88, bottom=0.14, wspace=0.10)
+    png_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(png_path, dpi=150, facecolor=bg)
+    plt.close(fig)
+
+
 def run(
     *,
     fast: bool,
@@ -831,6 +971,7 @@ def run(
     html_path: Path,
     csv_path: Path,
     open_browser: bool,
+    png_path: Path = DEFAULT_PNG,
 ) -> tuple[Path, Path]:
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     TABLES_DIR.mkdir(parents=True, exist_ok=True)
@@ -898,7 +1039,20 @@ def run(
     )
     html_path.write_text(html, encoding="utf-8")
 
+    _write_static_figure(
+        coords=coords,
+        labels_sample=labels_sample,
+        clusters=clusters,
+        variance=meta["variance"],
+        method_name=method_name,
+        scaler=scaler,
+        n_rows=int(len(x)),
+        n_sample=int(len(sample_idx)),
+        png_path=png_path,
+    )
+
     _progress(f"Saved HTML visualizer: {html_path}")
+    _progress(f"Saved static report figure: {png_path}")
     _progress(f"Saved sampled PCA coordinates: {csv_path}")
     if open_browser:
         webbrowser.open(html_path.resolve().as_uri())
@@ -910,12 +1064,13 @@ def main() -> None:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--fast", action="store_true", help="Use the configured fast subsample.")
     mode.add_argument("--full", action="store_true", help="Use all available rows.")
-    parser.add_argument("--scaler", choices=["standard", "robust"], default="robust")
+    parser.add_argument("--scaler", choices=["standard", "robust"], default="standard")
     parser.add_argument("--labeler", choices=["ikmeans", "kmeans", "none"], default="ikmeans")
     parser.add_argument("--k", type=int, default=8, help="k for k-means, or k_max for iKMeans.")
-    parser.add_argument("--sample-size", type=int, default=6000)
+    parser.add_argument("--sample-size", type=int, default=7000)
     parser.add_argument("--seed", type=int, default=FAST_SEED)
     parser.add_argument("--output", type=Path, default=DEFAULT_HTML)
+    parser.add_argument("--png-output", type=Path, default=DEFAULT_PNG)
     parser.add_argument("--csv-output", type=Path, default=DEFAULT_CSV)
     parser.add_argument("--open", action="store_true", help="Open the exported HTML in the browser.")
     args = parser.parse_args()
@@ -936,6 +1091,7 @@ def main() -> None:
         html_path=args.output,
         csv_path=args.csv_output,
         open_browser=args.open,
+        png_path=args.png_output,
     )
 
 

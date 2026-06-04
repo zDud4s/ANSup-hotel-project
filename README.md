@@ -40,11 +40,12 @@ bash run_all --fast
 bash run_all
 ```
 
-All figures and tables are auto-generated into `figures/` and `tables/`. `run_all` is a 16-step pipeline
+All figures and tables are auto-generated into `figures/` and `tables/`. `run_all` is a 17-step pipeline
 (validation → EDA → preprocessing → baseline k-means/iK-means → GMM → **bootstrap stability** → **GMM extended-k BIC
-trajectory** → profiling → scaler comparison → family comparison → main-population → PCA visualisation → E4 PCA study →
-**FAMD representation comparison** → **ADR-inclusion sensitivity** → E1 anomaly → E5 t-SNE → headline k=7 profile →
-**segment predictive utility** → **surrogate decision tree**). The bolded steps were added in methodological deepening passes.
+trajectory** → profiling → scaler comparison → family comparison → main-population → PCA visualisation → **PCA(3) static +
+interactive 3D visualiser** → E4 PCA study → **FAMD representation comparison** → **ADR-inclusion sensitivity** → E1 anomaly
+→ E5 t-SNE → headline k=7 profile → **segment predictive utility** → **surrogate decision tree**). The bolded steps were
+added in methodological deepening passes.
 
 ---
 

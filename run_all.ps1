@@ -132,6 +132,11 @@ Write-Host "=== Step 9: Cluster-space PCA visualisation ==="
 Assert-StepSucceeded "Step 9: Cluster-space PCA visualisation"
 
 Write-Host ""
+Write-Host "=== Step 9b: Cluster-space PCA(3) static + interactive visualiser ==="
+& $PythonBin -u -m src.evaluation.visualize_components_3d $ModeFlag
+Assert-StepSucceeded "Step 9b: Cluster-space PCA(3) static + interactive visualiser"
+
+Write-Host ""
 Write-Host "=== Step 10: E4 PCA/SVD clustering study ==="
 & $PythonBin -u -m src.evaluation.pca_study $ModeFlag
 Assert-StepSucceeded "Step 10: E4 PCA/SVD clustering study"

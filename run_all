@@ -152,6 +152,10 @@ echo "=== Step 9: Cluster-space PCA visualisation ==="
 "$PYTHON_BIN" -u -m src.evaluation.visualize_clusters $MODE_FLAG
 
 echo ""
+echo "=== Step 9b: Cluster-space PCA(3) static + interactive visualiser ==="
+"$PYTHON_BIN" -u -m src.evaluation.visualize_components_3d $MODE_FLAG
+
+echo ""
 echo "=== Step 10: E4 PCA/SVD clustering study ==="
 "$PYTHON_BIN" -u -m src.evaluation.pca_study $MODE_FLAG
 
