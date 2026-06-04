@@ -1,0 +1,8 @@
+cluster,n,purity,rule,rule_plain
+0,2754,1.0,customer_type_Transient-Party <= 0.84 AND hotel_City Hotel <= 0.84 AND distribution_channel_TA/TO > 0.84 AND has_kids > 1.57,not Transient-Party  ∧  not City Hotel  ∧  is TA/TO  ∧  has children
+1,21251,0.946,customer_type_Transient-Party <= 0.84 AND hotel_City Hotel <= 0.84 AND distribution_channel_TA/TO > 0.84 AND has_kids <= 1.57,not Transient-Party  ∧  not City Hotel  ∧  is TA/TO  ∧  no children
+2,15382,0.685,customer_type_Transient-Party <= 0.84 AND hotel_City Hotel > 0.84 AND deposit_type_Non Refund <= 0.84 AND reserved_room_type_A <= 0.84,not Transient-Party  ∧  is City Hotel  ∧  not Non Refund  ∧  not A
+3,34785,0.77,customer_type_Transient-Party <= 0.84 AND hotel_City Hotel > 0.84 AND deposit_type_Non Refund <= 0.84 AND reserved_room_type_A > 0.84,not Transient-Party  ∧  is City Hotel  ∧  not Non Refund  ∧  is A
+4,6751,0.894,customer_type_Transient-Party <= 0.84 AND hotel_City Hotel <= 0.84 AND distribution_channel_TA/TO <= 0.84 AND lead_time <= -0.02,not Transient-Party  ∧  not City Hotel  ∧  not TA/TO  ∧  low lead time
+5,17824,0.923,customer_type_Transient-Party > 0.84 AND distribution_channel_Direct <= 0.84 AND market_segment_Online TA <= 0.84 AND market_segment_Corporate <= 0.84,is Transient-Party  ∧  not Direct  ∧  not Online TA  ∧  not Corporate
+6,10512,1.0,customer_type_Transient-Party <= 0.84 AND hotel_City Hotel > 0.84 AND deposit_type_Non Refund > 0.84 AND lead_time > -0.44,not Transient-Party  ∧  is City Hotel  ∧  is Non Refund  ∧  high lead time

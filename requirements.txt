@@ -1,0 +1,14 @@
+# Hotel Booking Demand clustering study — direct dependencies (pinned).
+# Lab/reference environment: Python 3.13.0 on Windows 11.
+# A complete, exact lock of the full environment is in requirements.lock.txt
+# (158 packages, `pip freeze`). Use that for byte-exact reproduction.
+#
+#   python -m venv .venv && .venv\Scripts\activate
+#   pip install -r requirements.txt
+#
+scikit-learn==1.8.0
+numpy==2.4.2
+pandas==3.0.1
+scipy==1.17.1
+matplotlib==3.10.8
+PyYAML==6.0.3

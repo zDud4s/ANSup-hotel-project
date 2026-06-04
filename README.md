@@ -24,9 +24,9 @@ documentation, evaluation protocol, success criteria, and risks/ethics.
 
 ## Dataset
 
-- **File:** `data/raw/hotel_bookings_course_release_v1.csv` — **not committed**
-- **SHA-256:** `7c2ae42a7353905ea136e5c2287f17c92c5435826598bfbb8491c6f0c7b1fc06`
-- Place the CSV in `data/raw/` before running anything.
+- **File:** `data/raw/hotel_bookings_course_release_v1.csv` — **not committed** (CC BY 4.0; see [`data/ATTRIBUTION.md`](data/ATTRIBUTION.md)).
+- **SHA-256:** `7c2ae42a7353905ea136e5c2287f17c92c5435826598bfbb8491c6f0c7b1fc06` — validated on load by `src/data/validate.py`.
+- Obtain it from the course release (or Kaggle `jessemostipak/hotel-booking-demand`) and place it in `data/raw/` before running. The expected fingerprint, source URL, and licence are recorded in `data/raw/DATASET_MANIFEST.yml`.
 
 ---
 
@@ -40,7 +40,11 @@ bash run_all --fast
 bash run_all
 ```
 
-All figures and tables are auto-generated into `figures/` and `tables/`.
+All figures and tables are auto-generated into `figures/` and `tables/`. `run_all` is a 16-step pipeline
+(validation → EDA → preprocessing → baseline k-means/iK-means → GMM → **bootstrap stability** → **GMM extended-k BIC
+trajectory** → profiling → scaler comparison → family comparison → main-population → PCA visualisation → E4 PCA study →
+**FAMD representation comparison** → **ADR-inclusion sensitivity** → E1 anomaly → E5 t-SNE → headline k=7 profile →
+**segment predictive utility** → **surrogate decision tree**). The bolded steps were added in methodological deepening passes.
 
 ---
 
@@ -61,9 +65,11 @@ ANSup-hotel-project/
 │   ├── preprocessing/
 │   │   ├── feature_config.py  ← column exclusions, seeds, constants
 │   │   └── pipeline.py        ← RareCategoryGrouper + ColumnTransformer
-│   ├── clustering/            ← Task 1.2 (in progress)
-│   ├── evaluation/            ← Task 3 (planned)
-│   └── utils/                 ← experiment logger (planned)
+│   ├── clustering/            ← k-means, iK-means, GMM (Tasks 1.2, 2)
+│   ├── evaluation/            ← indices, seed+bootstrap stability, family/scaler comparison,
+│   │                            FAMD & ADR representation studies, GMM model selection, E1/E4/E5 (Task 3)
+│   ├── report/                ← build_final_report.py (markdown → .docx)
+│   └── utils/                 ← experiment logger → experiments.csv
 ├── figures/                   ← auto-generated
 ├── tables/                    ← auto-generated
 ├── report/                    ← academic report (due 5 Jun 2026)
@@ -79,10 +85,19 @@ ANSup-hotel-project/
 | Task | Status |
 |------|--------|
 | 1.1 — Data preparation and preprocessing pipeline | Done |
-| 1.2 — Baseline clustering (k-means, iK-means) | In progress |
-| 2 — Alternative clustering family | Not started |
-| 3 — Evaluation and robustness analysis | Not started |
-| 4 — Report and reproducibility | Not started |
+| 1.2 — Baseline clustering (k-means, iK-means) | Done |
+| 2 — Alternative clustering family (GMM, AIC/BIC) | Done |
+| 3 — Evaluation and robustness analysis | Done |
+| 4 — Report and reproducibility | Done — `report/final/Final_Report.docx` |
+| E4 — PCA/SVD · E1 — cluster-aware anomaly · E5 — t-SNE viz | Done (extensions) |
+
+**Headline result:** iK-means + StandardScaler gives **k = 7** segments — the only family stable on *both* the seed
+(ARI = 1.0, structural) and the **bootstrap** data-perturbation notion (ARI = 0.86); MiniBatch k-means (0.50) and GMM
+(0.66) fail the 0.80 gate on both. The representation study shows **PCA-13 improves** the headline (separation +
+stability) while a principled **FAMD** coding does not, and an extended BIC search confirms GMM has no parsimonious
+component count. The full write-up is the academic report
+[`report/final/Final_Report.docx`](report/final/Final_Report.docx) and [`report/final/Final_Report.pdf`](report/final/Final_Report.pdf)
+(source: `docs/Final_Report.md`).
 
 ---
 

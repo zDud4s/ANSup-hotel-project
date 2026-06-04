@@ -45,7 +45,12 @@ from ..preprocessing.pipeline import (
     get_feature_names,
     split_clustering_and_profiling,
 )
-from ..utils.experiment_logger import EXP_HEADER, write_experiments
+from ..utils.experiment_logger import (
+    EXP_HEADER,
+    build_run_meta,
+    to_parameters_json,
+    write_experiments,
+)
 from .ikmeans import fit_ikmeans
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -86,10 +91,17 @@ class RunRow:
     log_likelihood: str = ""
     n_iter: str = ""
     converged: str = ""
+    parameters: str = ""
     notes: str = ""
+    # Run-level provenance (stamped at write time when left blank).
+    run_id: str = ""
+    date: str = ""
+    sample_rule: str = ""
 
     def as_dict(self) -> dict:
-        return {field: getattr(self, field) for field in EXP_HEADER}
+        # getattr default keeps the row tolerant if EXP_HEADER gains columns
+        # that a given method does not populate.
+        return {field: getattr(self, field, "") for field in EXP_HEADER}
 
 
 def load_clustering_input(fast: bool) -> pd.DataFrame:
@@ -141,6 +153,12 @@ def run_kmeans_collect(X: np.ndarray, variant: str, sil_sample: int | None
     from sklearn.metrics import adjusted_rand_score
     total_runs = len(K_RANGE) * len(SEEDS)
     run_no = 0
+    kmeans_params = to_parameters_json({
+        "algorithm": "MiniBatchKMeans",
+        "n_init": 10, "batch_size": 1024, "max_iter": 300,
+        "scaler": variant, "k_range": [K_RANGE[0], K_RANGE[-1]],
+        "distance": "euclidean",
+    })
     for k in K_RANGE:
         _progress(f"    [k-means] starting k={k}")
         labels_by_seed: dict[int, np.ndarray] = {}
@@ -181,6 +199,7 @@ def run_kmeans_collect(X: np.ndarray, variant: str, sil_sample: int | None
                 calinski_harabasz=idx["calinski_harabasz"],
                 davies_bouldin=idx["davies_bouldin"],
                 ari_vs_seed0=ari_ref,
+                parameters=kmeans_params,
             ))
         labels_cache[("MiniBatchKMeans", variant, k)] = labels_by_seed
         _progress(f"    [k-means] completed k={k}")
@@ -195,6 +214,14 @@ def run_ikmeans_collect(X: np.ndarray, variant: str, sil_sample: int | None
     per_seed_k: dict[int, int] = {}
     per_seed_indices: dict[int, dict] = {}
     from sklearn.metrics import adjusted_rand_score
+    ikmeans_params = to_parameters_json({
+        "algorithm": "iKMeans",
+        "k_max": K_RANGE[-1],
+        "min_cluster_size": "max(20, 0.5% of n)",
+        "final_kmeans_max_iter": 300,
+        "scaler": variant, "distance": "euclidean",
+        "init": "anomalous-pattern (deterministic)",
+    })
     for run_no, seed in enumerate(SEEDS, start=1):
         _progress(
             f"    [iK-means {run_no}/{len(SEEDS)}] fit "
@@ -229,6 +256,7 @@ def run_ikmeans_collect(X: np.ndarray, variant: str, sil_sample: int | None
             calinski_harabasz=idx["calinski_harabasz"],
             davies_bouldin=idx["davies_bouldin"],
             ari_vs_seed0=ari_ref,
+            parameters=ikmeans_params,
             notes="auto-determined k",
         ))
     # Group iK-means by the modal k for stability reporting; if seeds disagree,
@@ -310,6 +338,8 @@ def main(fast: bool = FAST_MODE) -> None:
     _progress("=== Task 1.2 - baseline clustering ===")
     sil_sample = SILHOUETTE_SAMPLE_FAST if fast else SILHOUETTE_SAMPLE_FULL
     df_input = load_clustering_input(fast)
+    run_meta = build_run_meta(fast, n_rows=len(df_input), seed=FAST_SEED if fast else None)
+    _progress(f"  run_id={run_meta['run_id']}  sample_rule={run_meta['sample_rule']}")
 
     all_rows: list[RunRow] = []
     all_labels: dict = {}
@@ -340,7 +370,7 @@ def main(fast: bool = FAST_MODE) -> None:
         all_labels.update(ik_labels)
 
     _progress("\nWriting experiments.csv ...")
-    write_experiments([r.as_dict() for r in all_rows], EXP_CSV)
+    write_experiments([r.as_dict() for r in all_rows], EXP_CSV, run_meta=run_meta)
     stability = collect_stability(all_rows, all_labels)
     summary, stab_df = build_summary_tables(all_rows, stability)
     summary.to_csv(TABLES_DIR / "task1_2_summary.csv", index=False)

@@ -12,6 +12,18 @@ upstream_sources:
 
 license_terms:
   kaggle_listing: "Attribution 4.0 International (CC BY 4.0) (as stated on Kaggle dataset page)."
+  spdx_id: "CC-BY-4.0"
+  license_url: "https://creativecommons.org/licenses/by/4.0/"
+  attribution: "Data: Antonio, de Almeida & Nunes (2019), Hotel booking demand datasets, Data in Brief 22:41-49, doi:10.1016/j.dib.2018.11.126. Used under CC BY 4.0. See data/ATTRIBUTION.md."
+
+citation:
+  authors: ["Nuno Antonio", "Ana de Almeida", "Luis Nunes"]
+  year: 2019
+  title: "Hotel booking demand datasets"
+  journal: "Data in Brief"
+  volume: 22
+  pages: "41-49"
+  doi: "10.1016/j.dib.2018.11.126"
 
 governance_notes:
   - "Raw snapshot provided: no cleaning/imputation performed by instructors."

@@ -9,8 +9,16 @@ cluster interpretation without ever entering the distance computation.
 Pipeline structure (clustering input only):
   Numerical  : median imputation -> scaler
   Categorical: Unknown imputation -> rare grouping -> one-hot encoding
-               -> rare dummy removal -> StandardScaler
-  Blocks     : categorical block weighted to match numerical block variance
+               -> rare dummy removal   (dummies stay 0/1, NOT standardised)
+  Blocks     : categorical block multiplied by a single weight that
+               equalises the measured total variance of the two blocks
+
+One-hot dummies are intentionally left as raw 0/1 indicators. Variance-
+standardising individual dummies (dividing each by its own std) would
+inflate rare categories until a handful of bookings dominate the
+Euclidean distance. Instead, a single block weight rescales the whole
+categorical block so its total variance matches the numerical block's
+(prof feedback on one-hot treatment).
 
 The representation is intentionally singular: engineered stay/party
 signals replace the raw correlated stay/party fields, rare one-hot
@@ -158,16 +166,40 @@ def split_clustering_and_profiling(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.D
 
 
 class BlockWeighter(BaseEstimator, TransformerMixin):
-    """Weight the categorical block to match numerical block variance."""
+    """Scale the whole categorical block so its total variance matches the
+    numerical block's.
+
+    The one-hot dummies arrive as raw 0/1 columns (not standardised), so a
+    rare dummy contributes only p(1-p) variance and a common one close to
+    0.25. We deliberately do NOT divide each dummy by its own std: that would
+    blow rare categories up to unit variance and let a handful of bookings
+    dominate Euclidean distance. Instead we measure the total variance of
+    each block on the fit data and apply a single multiplicative weight
+
+        weight = sqrt( sum_var(numerical block) / sum_var(categorical block) )
+
+    to the entire categorical block. This equalises the variance each block
+    contributes to the distance and is scaler-agnostic (it adapts to the
+    actual numerical variance under StandardScaler or RobustScaler).
+    """
 
     def __init__(self, n_num: int):
         self.n_num = n_num
 
     def fit(self, X, y=None):
+        X = np.asarray(X, dtype=float)
         n_total = X.shape[1]
         n_cat = max(n_total - self.n_num, 1)
-        self.weight_ = float(np.sqrt(self.n_num / n_cat))
+        col_var = X.var(axis=0)
+        num_var_total = float(col_var[:self.n_num].sum())
+        cat_var_total = float(col_var[self.n_num:].sum())
+        if cat_var_total > 0:
+            self.weight_ = float(np.sqrt(num_var_total / cat_var_total))
+        else:
+            self.weight_ = 1.0
         self.n_cat_ = int(n_cat)
+        self.num_var_total_ = num_var_total
+        self.cat_var_total_ = cat_var_total
         return self
 
     def transform(self, X, y=None):

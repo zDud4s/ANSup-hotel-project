@@ -18,6 +18,15 @@ Two consequences relevant to the §3 protocol:
   baseline, capping at `k_max` if the heuristic discovers more.
 * The extraction step is deterministic (no randomness), so the seed
   only affects tie-breaking inside the final k-means refinement.
+
+Representation note (metric governance): both the anomalous-pattern
+discovery step AND the final k-means refinement run on the SAME full
+governed feature matrix (the R-EUCLID matrix) used by every other
+standard algorithm. There is **no PCA-projected discovery space** here:
+this module never imports or applies PCA. PCA appears only in the
+`src/evaluation/visualize_*` diagnostic projections, which are plotting
+aids and never feed any clustering. Internal indices are therefore
+computed in the same representation and metric as the fit.
 """
 
 from __future__ import annotations

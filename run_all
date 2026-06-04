@@ -97,6 +97,12 @@ echo "=== Step 1: Data validation ==="
 "$PYTHON_BIN" -u -m src.data.validate
 
 
+# EDA figures
+echo ""
+echo "=== Step 1b: EDA figure generation ==="
+"$PYTHON_BIN" -u -m src.data.eda $MODE_FLAG
+
+
 # Preprocessing pipeline (Task 1.1)
 
 echo ""
@@ -114,6 +120,72 @@ echo ""
 echo "=== Step 4: Task 2.1 Gaussian Mixture Model clustering ==="
 "$PYTHON_BIN" -u -m src.clustering.run_gaussian $MODE_FLAG
 
+echo ""
+echo "=== Step 4b: Bootstrap (data-perturbation) stability ==="
+"$PYTHON_BIN" -u -m src.evaluation.stability $MODE_FLAG
+
+echo ""
+echo "=== Step 4c: GMM extended-k BIC/AIC trajectory diagnostic ==="
+"$PYTHON_BIN" -u -m src.evaluation.gmm_model_selection $MODE_FLAG
+
+
+# Post-hoc profiling and robustness evidence cited in the report
+echo ""
+echo "=== Step 5: iK-means RobustScaler cluster profile (anomaly-split check) ==="
+"$PYTHON_BIN" -u -m src.evaluation.profile_ikmeans $MODE_FLAG
+
+echo ""
+echo "=== Step 6: StandardScaler vs RobustScaler profile comparison ==="
+"$PYTHON_BIN" -u -m src.evaluation.compare_scalers $MODE_FLAG
+
+
+echo ""
+echo "=== Step 7: Cross-family comparison ==="
+"$PYTHON_BIN" -u -m src.evaluation.compare_families $MODE_FLAG
+
+echo ""
+echo "=== Step 8: Main-population clustering ==="
+"$PYTHON_BIN" -u -m src.evaluation.main_population_clustering $MODE_FLAG
+
+echo ""
+echo "=== Step 9: Cluster-space PCA visualisation ==="
+"$PYTHON_BIN" -u -m src.evaluation.visualize_clusters $MODE_FLAG
+
+echo ""
+echo "=== Step 10: E4 PCA/SVD clustering study ==="
+"$PYTHON_BIN" -u -m src.evaluation.pca_study $MODE_FLAG
+
+echo ""
+echo "=== Step 10b: FAMD representation comparison (RQ2) ==="
+"$PYTHON_BIN" -u -m src.evaluation.famd_study $MODE_FLAG
+
+echo ""
+echo "=== Step 10c: ADR-inclusion sensitivity (RQ2 governance) ==="
+"$PYTHON_BIN" -u -m src.evaluation.adr_sensitivity $MODE_FLAG
+
+echo ""
+echo "=== Step 10d: Gower + hierarchical (distinct non-Euclidean similarity, RQ2/RQ5) ==="
+"$PYTHON_BIN" -u -m src.evaluation.gower_hierarchical
+
+echo ""
+echo "=== Step 11: E1 cluster-aware anomaly analysis ==="
+"$PYTHON_BIN" -u -m src.evaluation.anomaly_analysis $MODE_FLAG
+
+echo ""
+echo "=== Step 12: E5 t-SNE visualisation (viz-only) ==="
+"$PYTHON_BIN" -u -m src.evaluation.tsne_viz $MODE_FLAG
+
+echo ""
+echo "=== Step 13: Headline iK-means+Standard k profiles ==="
+"$PYTHON_BIN" -u -m src.evaluation.profile_headline $MODE_FLAG
+
+echo ""
+echo "=== Step 14: Segment predictive utility (post-hoc cancellation) ==="
+"$PYTHON_BIN" -u -m src.evaluation.segment_predictive_utility $MODE_FLAG
+
+echo ""
+echo "=== Step 15: Surrogate decision-tree segment explanation ==="
+"$PYTHON_BIN" -u -m src.evaluation.surrogate_tree $MODE_FLAG
 
 
 echo ""

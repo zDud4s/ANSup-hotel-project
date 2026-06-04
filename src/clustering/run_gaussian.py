@@ -26,7 +26,8 @@ from ..evaluation.metrics import compute_indices
 from ..preprocessing.feature_config import FAST_MODE, SEEDS
 from .run_baseline import RunRow, build_summary_tables, load_clustering_input, SCALERS
 from ..preprocessing.pipeline import build_preprocessor
-from ..utils.experiment_logger import append_experiments
+from ..preprocessing.feature_config import FAST_SEED
+from ..utils.experiment_logger import append_experiments, build_run_meta, to_parameters_json
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TABLES_DIR   = PROJECT_ROOT / "tables"
@@ -44,7 +45,13 @@ def run_gmm_collect(X: np.ndarray, variant: str, sil_sample: int | None) -> list
     rows: list[RunRow] = []
     total_runs = len(K_RANGE) * len(SEEDS)
     run_no = 0
-    
+    gmm_params = to_parameters_json({
+        "algorithm": "GaussianMixture",
+        "covariance_type": "full", "max_iter": 200, "n_init": 10,
+        "scaler": variant, "k_range": [K_RANGE[0], K_RANGE[-1]],
+        "distance": "euclidean (hard-label indices)",
+    })
+
     for k in K_RANGE:
         _progress(f"    [GMM] starting k={k}")
         for seed in SEEDS:
@@ -81,6 +88,7 @@ def run_gmm_collect(X: np.ndarray, variant: str, sil_sample: int | None) -> list
                 log_likelihood=f"{log_lik:.2f}",
                 n_iter=str(gmm.n_iter_),
                 converged=str(gmm.converged_),
+                parameters=gmm_params,
                 notes="Covariance: full"
             ))
     return rows
@@ -141,7 +149,9 @@ def main(fast: bool = FAST_MODE) -> None:
     _progress("=== Task 2.1 - GMM Clustering and Model Selection ===")
     sil_sample = SILHOUETTE_SAMPLE_FAST if fast else SILHOUETTE_SAMPLE_FULL
     df_input = load_clustering_input(fast)
-    
+    run_meta = build_run_meta(fast, n_rows=len(df_input), seed=FAST_SEED if fast else None)
+    _progress(f"  run_id={run_meta['run_id']}  sample_rule={run_meta['sample_rule']}")
+
     gmm_rows: list[RunRow] = []
     
     for variant in SCALERS:
@@ -153,7 +163,7 @@ def main(fast: bool = FAST_MODE) -> None:
         gmm_rows.extend(rows)
         
     _progress("\nAppending GMM runs to experiments.csv ...")
-    append_experiments([r.as_dict() for r in gmm_rows], EXP_CSV)
+    append_experiments([r.as_dict() for r in gmm_rows], EXP_CSV, run_meta=run_meta)
     
     summary, _ = build_summary_tables(gmm_rows, stability=None)
     df_gmm = pd.DataFrame([r.as_dict() for r in gmm_rows])

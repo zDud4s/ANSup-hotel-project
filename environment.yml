@@ -1,7 +1,12 @@
 name: ansup-hotel
+# Reference environment for the Hotel Booking Demand clustering study.
+# The authoritative lab environment is Python 3.13 on Windows 11 (see requirements.txt
+# for pinned direct deps and requirements.lock.txt for the exact 158-package freeze).
 channels:
   - conda-forge
   - defaults
 dependencies:
-  # fill in after deciding on library versions
-  - python=3.11
+  - python=3.13
+  - pip
+  - pip:
+      - -r requirements.txt
